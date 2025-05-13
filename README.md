@@ -30,8 +30,7 @@ GIGA_AUTH_KEY=ваш_API-ключ_GigaChat
 
 4. Получите токены:
 - Telegram Bot Token: через [@BotFather](https://t.me/BotFather)
-- GigaChat API Key: на [платформе GigaChat](https://developers.sber.ru/gigachat)
-
+- GigaChat API Key: [на платформе GigaChat](https://developers.sber.ru/studio/workspaces/my-space/get/gigachat-api)
 ## 🚀 Запуск
 ```bash
 python src/main.py
