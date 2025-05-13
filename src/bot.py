@@ -1,16 +1,15 @@
 import telebot
 import json
 from gigachat import GigaChat
+from gigachat.models import Chat, Messages, MessagesRole
 
 
-def generate_prompt(message):
-    return f'Напиши плейлист из 10 песен по следующему запросу: {message}. ' +\
-    'Формат ответа: JSON {"songs": [{"author": "Автор песни", "name": "Название песни"}], ' +\
-    '"response_error": {"status": "false", "message": "None"}} ' +\
-    'Если ты не можешь создать плейлист по запросу, то ответ будет следующим: ' +\
-    'JSON {"response_error": {"status": "true", "message": "Я не могу предоставить вам плейлист ' +\
-    f'с песнями по запросу «{message}». Если у вас есть другой запрос,' +\
-    'буду рад помочь!"}} ПОМНИ, ЧТО ОТВЕТ ЭТО ТОЛЬКО ТЕКСТ В ФОРМАТЕ JSON'
+system_prompt = 'Напиши плейлист из нескольких песен (по умолчанию 10) по следующему запросу: {message}. ' +\
+    'Формат ответа: {"songs": [{"author": "Автор песни", "name": "Название песни"}], ' +\
+    '"response_error": {"status": "false", "message": "текст ошибки"}} ' +\
+    'Если ты не можешь создать ДОСТОВЕРНЫЙ плейлист по запросу, то ответ будет следующим: ' +\
+    '{"response_error": {"status": "true", "message": "текст ошибки"}} ' +\
+    'ПОМНИ, ЧТО ОТВЕТ ЭТО ТОЛЬКО ТЕКСТ В ФОРМАТЕ JSON БЕЗ ЛИШНИХ СИМВОЛОВ'
 
 
 class Bot:
@@ -34,20 +33,46 @@ class Bot:
         @self.bot.message_handler(func=lambda message: True)
         def echo_message(message):
             delete_message = self.bot.send_message(message.chat.id, "Обрабатываю ваш зарос")
-            with GigaChat(credentials=self.credentials,verify_ssl_certs=False, model="GigaChat-Max") as gigachat:
+            with GigaChat(credentials=self.credentials,verify_ssl_certs=False, model="GigaChat-2-Max") as gigachat:
+                prompt = system_prompt
+                payload = Chat(
+                    messages=[
+                        Messages(
+                            role=MessagesRole.SYSTEM,
+                            content=prompt
+                        ),
+                        Messages(
+                            role=MessagesRole.USER,
+                            content=f'message = {message.text}'
+                        )
+                    ],
+                    temperature=0.7
+                )
+                response = gigachat.chat(payload)
                 try:
-                    response = gigachat.chat(generate_prompt(message.text))
                     response = response.choices[0].message.content
-                    response = response[8:-4]
                     response = json.loads(response)
-                    if response["response_error"]["status"] == "true":
+                    err = False
+                    for key in response:
+                        if key == "response_error":
+                            err = True
+                    if err:
                         self.bot.reply_to(message, response["response_error"]["message"])
                     else:
                         response_message = ""
                         for song in response["songs"]:
+                            name = "БЕЗ НАЗВАНИЯ"
+                            author = "НЕИЗВЕСТЕН"
+                            for key in song:
+                                if key.lower() == "name":
+                                    name = song[key]
+                                elif key.lower() == "author":
+                                    author = song[key]
                             response_message += f'• {song["name"]} — {song["author"]}\n'
                         self.bot.reply_to(message, response_message)
                 except Exception as e:
+                    print(prompt)
+                    print(response)
                     print(e)
                     self.bot.reply_to(message, "Ошибка, попробуйте ещё раз немного позже")
 
