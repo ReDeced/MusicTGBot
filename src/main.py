@@ -7,12 +7,11 @@ def main():
     if not load_dotenv():
         raise RuntimeError("Не удалось загрузить .env файл")
 
-    client_id = os.getenv('GIGA_CLIENT_ID')
-    client_secret = os.getenv('GIGA_CLIENT_SECRET')
+    auth_key = os.getenv('GIGA_AUTH_KEY')
 
     bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
 
-    bot = Bot(bot_token)
+    bot = Bot(bot_token, auth_key)
 
 
 if __name__ == "__main__":
